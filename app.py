@@ -51,8 +51,8 @@ with st.sidebar:
     st.header("🔧 Input Data Menu")
 
     # Menu Category Selection
-    menu_categories = list(menu_encoder.classes_)
-    menu_category = st.selectbox(
+    menu_categories = menu_encoder.classes_.tolist()
+    menu_category_label = st.selectbox(
         "📋 Pilih Kategori Menu:",
         menu_categories
     )
@@ -73,7 +73,7 @@ with st.sidebar:
 # =======================
 if predict_button:
     # Transform input
-    menu_encoded = menu_encoder.transform([menu_category])[0]
+    menu_encoded = menu_encoder.transform([menu_category_label])[0]
     price_scaled = price_scaler.transform([[price]])[0][0]
 
     prediction = model.predict([[menu_encoded, price_scaled]])[0]
@@ -96,7 +96,7 @@ if predict_button:
 
     st.markdown("---")
     st.markdown("### 📌 Detail Input")
-    st.write(f"**Kategori Menu:** {menu_category}")
+    st.write(f"**Kategori Menu:** {menu_category_label}")
     st.write(f"**Harga (USD):** ${price:.2f}")
 
 # =======================
