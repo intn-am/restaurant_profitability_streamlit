@@ -3,12 +3,26 @@ import joblib
 import pandas as pd
 
 # -----------------------
-# Load Model & Encoders
+# Load model dan encoder/scaler
 # -----------------------
 model = joblib.load("best_random_forest_model.pkl")
+
+# Load encoder kategori menu
 menu_encoder = joblib.load("menu_category_encoder.pkl")
+
+# Load scaler harga
 price_scaler = joblib.load("price_scaler.pkl")
+
+# Load encoder label profitabilitas
 profitability_encoder = joblib.load("profitability_encoder.pkl")
+
+# -----------------------
+# Pastikan kategori menu terbaca
+# -----------------------
+if isinstance(menu_encoder, dict):
+    menu_categories = list(menu_encoder.keys())
+else:
+    menu_categories = list(menu_encoder.classes_)
 
 # -----------------------
 # App Config
@@ -33,12 +47,8 @@ Silakan masukkan data pada panel di sebelah kiri, lalu klik **Predict**.
 # -----------------------
 st.sidebar.header("🔧 Input Data")
 
-# Menu Category Selection (langsung dari encoder)
-menu_categories = list(menu_encoder.classes_)
-menu_category = st.sidebar.selectbox(
-    "Menu Category",
-    menu_categories
-)
+# Menu Category Selection
+menu_category = st.sidebar.selectbox("Menu Category", menu_categories)
 
 # Price Input
 price = st.sidebar.number_input(
@@ -52,30 +62,34 @@ price = st.sidebar.number_input(
 # Prediction Button
 # -----------------------
 if st.sidebar.button("Predict"):
-    # Encode menu category
-    menu_encoded = menu_encoder.transform([menu_category])[0]
+    # Encode kategori
+    if isinstance(menu_encoder, dict):
+        menu_encoded = menu_encoder[menu_category]
+    else:
+        menu_encoded = menu_encoder.transform([menu_category])[0]
     
-    # Scale price
+    # Scale harga
     price_scaled = price_scaler.transform([[price]])[0][0]
     
-    # Buat DataFrame untuk prediksi
-    input_data = pd.DataFrame([[menu_encoded, price_scaled]],
-                              columns=['MenuCategory', 'Price'])
-    
     # Prediksi
-    prediction_encoded = model.predict(input_data)[0]
-    prediction_label = profitability_encoder.inverse_transform([prediction_encoded])[0]
+    prediction = model.predict([[menu_encoded, price_scaled]])[0]
+    
+    # Decode hasil prediksi
+    if isinstance(profitability_encoder, dict):
+        result = [k for k, v in profitability_encoder.items() if v == prediction][0]
+    else:
+        result = profitability_encoder.inverse_transform([prediction])[0]
     
     # Display Result
     st.subheader("📊 Prediction Result")
-    if prediction_label == "High":
-        st.success(f"Predicted Profitability: **{prediction_label}** ✅")
+    if result.lower() == "high":
+        st.success(f"Predicted Profitability: **{result}** ✅")
         st.markdown("💡 Menu ini berpotensi memberikan **keuntungan tinggi** bagi restoran.")
-    elif prediction_label == "Medium":
-        st.info(f"Predicted Profitability: **{prediction_label}** ℹ️")
+    elif result.lower() == "medium":
+        st.info(f"Predicted Profitability: **{result}** ℹ️")
         st.markdown("Menu ini memberikan **keuntungan sedang**. Pertimbangkan strategi harga atau promosi.")
     else:
-        st.error(f"Predicted Profitability: **{prediction_label}** ⚠️")
+        st.error(f"Predicted Profitability: **{result}** ⚠️")
         st.markdown("Menu ini memiliki **keuntungan rendah**. Perlu evaluasi bahan dan harga jual.")
 
 # Footer
