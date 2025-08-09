@@ -3,7 +3,7 @@ import joblib
 import pandas as pd
 
 # -----------------------
-# Load model & preprocessors
+# Load Model & Encoders
 # -----------------------
 model = joblib.load("best_random_forest_model.pkl")
 menu_encoder = joblib.load("menu_category_encoder.pkl")
@@ -33,10 +33,11 @@ Silakan masukkan data pada panel di sebelah kiri, lalu klik **Predict**.
 # -----------------------
 st.sidebar.header("🔧 Input Data")
 
-# Menu Category Selection
+# Menu Category Selection (langsung dari encoder)
+menu_categories = list(menu_encoder.classes_)
 menu_category = st.sidebar.selectbox(
     "Menu Category",
-    menu_encoder.classes_
+    menu_categories
 )
 
 # Price Input
@@ -51,29 +52,32 @@ price = st.sidebar.number_input(
 # Prediction Button
 # -----------------------
 if st.sidebar.button("Predict"):
-    # Encode & scale input
+    # Encode menu category
     menu_encoded = menu_encoder.transform([menu_category])[0]
+    
+    # Scale price
     price_scaled = price_scaler.transform([[price]])[0][0]
-
-    # Gabungkan fitur
-    X_input = [[menu_encoded, price_scaled]]
-
+    
+    # Buat DataFrame untuk prediksi
+    input_data = pd.DataFrame([[menu_encoded, price_scaled]],
+                              columns=['MenuCategory', 'Price'])
+    
     # Prediksi
-    pred_encoded = model.predict(X_input)[0]
-    pred_label = profitability_encoder.inverse_transform([pred_encoded])[0]
-
+    prediction_encoded = model.predict(input_data)[0]
+    prediction_label = profitability_encoder.inverse_transform([prediction_encoded])[0]
+    
     # Display Result
     st.subheader("📊 Prediction Result")
-    if pred_label.lower() == "high":
-        st.success(f"Predicted Profitability: **{pred_label}** ✅")
+    if prediction_label == "High":
+        st.success(f"Predicted Profitability: **{prediction_label}** ✅")
         st.markdown("💡 Menu ini berpotensi memberikan **keuntungan tinggi** bagi restoran.")
-    elif pred_label.lower() == "medium":
-        st.info(f"Predicted Profitability: **{pred_label}** ℹ️")
+    elif prediction_label == "Medium":
+        st.info(f"Predicted Profitability: **{prediction_label}** ℹ️")
         st.markdown("Menu ini memberikan **keuntungan sedang**. Pertimbangkan strategi harga atau promosi.")
     else:
-        st.error(f"Predicted Profitability: **{pred_label}** ⚠️")
+        st.error(f"Predicted Profitability: **{prediction_label}** ⚠️")
         st.markdown("Menu ini memiliki **keuntungan rendah**. Perlu evaluasi bahan dan harga jual.")
 
 # Footer
 st.markdown("---")
-st.caption("© 2025 Restaurant Profitability Predictor | Powered by Tuned Random Forest Classifier")
+st.caption("© 2025 Restaurant Profitability Predictor | Powered by Random Forest Classifier")
